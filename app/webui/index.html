@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>EZcode</title>
+<style>
+/* 首屏骨架内联: 窗口一出现即呈现完整白底分栏, 不等 style.css 加载, 消除白板/跳版 */
+html,body{background:#f4f5f8;color:#191d27;margin:0;height:100%}
+#app{display:flex;height:100vh}
+#sidebar{width:264px;flex:0 0 264px;background:#fff;border-right:1px solid #e7e9ef;
+  display:flex;flex-direction:column;box-sizing:border-box}
+#main{flex:1;min-width:0;display:flex;flex-direction:column;background:#f4f5f8}
+#topbar{height:56px;flex:0 0 56px;background:#fff;border-bottom:1px solid #e7e9ef;
+  display:flex;align-items:center;padding:0 22px;box-sizing:border-box}
+#chat{flex:1;overflow:auto;padding:20px 24px}
+#composer{flex:0 0 auto;background:#fff;border-top:1px solid #e7e9ef;padding:14px 22px 18px}
+.overlay{display:none}
+#runbar{visibility:hidden}
+#welcome{display:none}
+.ib-menu,.persona-collapse{display:none}
+</style>
+<link rel="stylesheet" href="style.css?v=50">
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════════ 侧边栏: 品牌 / 主操作 / 任务 / 工作区 / 设置 ═══════════ -->
+  <aside id="sidebar">
+    <div class="brand">
+      <img class="logo" src="EZcode.png" alt="EZcode">
+      <div class="brand-text">
+        <b>EZcode</b>
+      </div>
+      <span class="brand-ver" id="brand-ver">v44</span>
+      <button class="upd-badge" id="update-badge" hidden
+              title="发现新版本，点击查看与安装">⬆</button>
+    </div>
+
+    <div class="side-primary">
+      <button class="newchat" id="btn-new">
+        <span>＋ 新建任务</span><span class="newchat-key">Ctrl N</span>
+      </button>
+    </div>
+
+    <div class="side-scroll">
+      <div class="side-head sessions-head"><span>任务列表</span><span class="side-count" id="task-count">0</span></div>
+      <div id="sessions" class="sessions"></div>
+    </div>
+
+    <div class="side-bottom">
+      <div class="side-label">工作区</div>
+      <!-- 专家中心: 「当前任务专家」默认收起, 右侧箭头可展开, 避免侧栏层级繁琐 -->
+      <div class="nav-row">
+        <button class="side-item" id="btn-experts" title="专家中心：浏览、切换与新建专家">
+          <span class="si-ico">🧠</span>
+          <span class="si-text"><b>专家中心</b><small>浏览与新建专家</small></span>
+          <span class="si-caret">›</span>
+        </button>
+        <button class="fold-btn" id="btn-persona-fold" title="展开当前任务专家"
+                aria-expanded="false" aria-controls="persona-collapse">⌄</button>
+      </div>
+      <div class="persona-collapse" id="persona-collapse">
+        <button class="side-item sub persona-row" id="btn-persona" title="专家中心：选择/新建专家，决定本任务的工具面与提示词">
+          <span class="si-ico p-ico" id="persona-icon">🛡</span>
+          <span class="si-text"><b id="persona-label">安全运营</b><small>当前任务专家</small></span>
+          <span class="p-caret">›</span>
+        </button>
+      </div>
+      <button class="side-item" id="btn-skills" title="技能：全局与项目级技能管理">
+        <span class="si-ico">🛠</span>
+        <span class="si-text"><b>技能</b><small>全局与项目级</small></span>
+        <span class="si-caret">›</span>
+      </button>
+      <button class="side-item" id="btn-connectors" title="连接器：系统API / MCP / 插件接入">
+        <span class="si-ico">🔌</span>
+        <span class="si-text"><b>连接器</b><small>系统API · MCP · 插件</small></span>
+        <span class="si-caret">›</span>
+      </button>
+
+      <div class="side-foot">
+        <button class="side-item compact" id="btn-settings" title="设置中心：模型、接入、扩展与偏好">
+          <span class="si-ico">⚙</span>
+          <span class="si-text"><b>设置中心</b></span>
+          <span class="si-caret">›</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ 主区 ═══════════ -->
+  <main id="main">
+    <header id="topbar">
+      <div id="chat-title">新任务</div>
+      <div class="top-right">
+        <span id="expert-chip" class="expert-chip">🛡 安全运营</span>
+        <span id="busy-dot" class="busy-dot" title="空闲"></span>
+      </div>
+    </header>
+
+    <div id="chat">
+      <div id="welcome" class="welcome">
+        <img class="wc-logo" src="EZcode.png" alt="EZcode">
+        <h1>有什么可以帮你？</h1>
+        <p>选一位专家开始：安全运营研判、编写项目代码，或处理日常事务。能力由你在设置中心按需接入。</p>
+        <div class="wc-grid" id="wc-grid"></div>
+        <div class="wc-tip">@路径 可附加文件证据 · 写文件与跑命令需切到可执行模式</div>
+      </div>
+      <div class="stream"><div class="msg sys"><div class="bubble">正在连接研判引擎…</div></div></div>
+    </div>
+    <button id="jump-bottom" title="回到最新消息">↓ 回到最新</button>
+
+    <div id="runbar">
+      <span class="spin" id="run-spin"></span>
+      <span id="run-text"></span>
+    </div>
+
+    <!-- 输入框: 对齐 WorkBuddy 的底部工具栏布局
+         ＋ 加号菜单 | 权限选择   ···   上下文百分比 | 模型名称 | 发送 -->
+    <div id="composer">
+      <div id="inputwrap">
+        <textarea id="input" rows="1"
+          placeholder="粘贴告警或描述任务，例如：研判今天 13:00 后未处理的告警…"></textarea>
+        <div id="inputbar">
+          <div class="ib-left">
+            <div class="ib-menu-wrap">
+              <button id="btn-plus" class="ib-ico" title="添加文件与快捷操作" aria-haspopup="true">＋</button>
+              <div id="plus-menu" class="ib-menu">
+                <div class="ib-menu-title">添加到对话</div>
+                <button class="ib-menu-item" data-act="attach">📎 <b>附加文件证据</b><small>选择本地文件，按 @路径 引用</small></button>
+                <button class="ib-menu-item" data-act="expert">🧠 <b>选择专家</b><small>切换或新建专家</small></button>
+                <button class="ib-menu-item" id="btn-toolview" data-act="toolview">🧾 工具显示 · 紧凑</button>
+                <button class="ib-menu-item" data-act="theme">🌗 <b>切换外观</b><small>明亮 / 暗色</small></button>
+                <button class="ib-menu-item" data-act="settings">⚙ <b>设置中心</b><small>模型 · 接入 · 扩展</small></button>
+              </div>
+            </div>
+            <div class="ib-menu-wrap">
+              <button id="btn-mode" class="ib-chip perm" title="权限：只读查询 / 可执行">
+                <span class="dot"></span><span id="mode-label">只读查询</span><span class="ib-caret">⌄</span>
+              </button>
+              <div id="mode-menu" class="ib-menu">
+                <div class="ib-menu-title">执行权限</div>
+                <button class="ib-menu-item" data-mode="query">🔒 <b>只读查询</b><small>仅查询工具，写操作禁止</small></button>
+                <button class="ib-menu-item" data-mode="execute">✏️ <b>可执行</b><small>写文件 / 跑命令，逐次确认</small></button>
+              </div>
+            </div>
+          </div>
+          <div class="ib-right">
+            <div class="ib-menu-wrap">
+              <button id="btn-ctx" class="ib-chip ctx" title="上下文占用估算">
+                <span class="ctx-ring" id="ctx-ring"></span>
+                <span class="ctx-word">上下文 <b id="ctx-pct">0%</b></span><span class="ib-caret">⌄</span>
+              </button>
+              <div id="ctx-menu" class="ib-menu">
+                <div class="ib-menu-title">上下文占用 <b id="ctx-detail">~0%</b></div>
+                <p class="ib-menu-note">超过 80% 自动压缩；压缩后会话记录仍完整留存</p>
+                <button class="ib-menu-item" id="btn-compact">⇲ <b>立即压缩上下文</b></button>
+              </div>
+            </div>
+            <div class="ib-menu-wrap">
+              <button id="btn-model" class="ib-chip model" title="选择模型">
+                <span id="model-label">模型</span><span class="ib-caret">⌄</span>
+              </button>
+              <div id="model-menu" class="ib-menu model-menu">
+                <div class="ib-menu-title">选择模型</div>
+                <div id="model-list"></div>
+              </div>
+            </div>
+            <button id="sendbtn" class="send" title="发送 (Enter)">↑</button>
+          </div>
+        </div>
+      </div>
+      <div id="composer-foot">
+        <span id="hint"></span>
+        <span id="disclaim"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 权限确认 / 设置中心 / 专家中心 共用弹窗 -->
+<div id="overlay" class="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+<div id="overlay2" class="overlay">
+  <div class="modal" id="modal2"></div>
+</div>
+<div id="toasts"></div>
+
+<script src="i18n.js?v=50"></script>
+<script src="app.js?v=50"></script>
+</body>
+</html>

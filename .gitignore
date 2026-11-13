@@ -1,0 +1,53 @@
+# ═══════════ EZcode · 开源仓库忽略规则 ═══════════
+# 原则: 仓库里不放任何凭据、本机路径、内部案例、构建产物。
+
+# ── 凭据与私有配置（绝不提交）──
+config.json
+devices.json
+knowledge/criteria.json
+.env
+.env.*
+*.key
+*.pem
+*_backup*.json
+
+# ── 运行期数据 ──
+logs/
+*.log
+*.session.json
+*.pyc
+*.pyo
+__pycache__/
+.ezcode/
+webview-profile/
+
+# ── 构建产物 / 安装包 ──
+build/_*/
+build/_*
+build/dist*/
+build/work*/
+build/installer-dist*/
+build/installer-work*/
+build/spec-*/
+dist/
+build/*.zip
+build/*.exe
+build/*.spec
+build/*.toc
+build/*松鼠*.png
+build/squirrel-source.png
+build/_icon-64-preview.png
+*.exe
+*.msi
+EZcodeSetup.exe
+
+# ── 编辑器 / 系统 ──
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# 说明: 以下文件是要提交的公开模板/资源, 请勿加入忽略
+#   config.example.json / devices.default.json / devices.example.json
+#   knowledge/criteria.example.json
+#   assets/EZcode-icon.png / app/webui/EZcode.png / build/EZcode.ico

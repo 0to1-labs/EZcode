@@ -1,0 +1,58 @@
+{
+  "_comment": "EZcode 首次运行默认配置 —— 不含任何凭据、不预置任何厂商集成。请在客户端「设置中心」填入你的大模型与接入信息。完整配置项参考 devices.example.json。",
+  "_update说明": "自动更新: 每次启动后台检查; sources 可配多条, github=GitHub Releases(填 owner/repo), static=国内服务器/内网共享的 version.json。多条同时检查并自动取最高版本。",
+  "update": {
+    "enabled": true,
+    "check_on_startup": true,
+    "channel": "stable",
+    "ignored_version": "",
+    "timeout": 6,
+    "sources": [
+      {
+        "type": "github",
+        "name": "GitHub Releases",
+        "enabled": true,
+        "repo": "",
+        "api_base": "https://api.github.com",
+        "asset": "EZcodeSetup",
+        "token": "",
+        "mirror": ""
+      },
+      {
+        "type": "static",
+        "name": "国内更新服务器",
+        "enabled": false,
+        "url": ""
+      }
+    ]
+  },
+  "llm": {
+    "active": "default",
+    "profiles": {
+      "default": {
+        "base_url": "https://api.deepseek.com/v1",
+        "api_key": "",
+        "model": "deepseek-v4-flash"
+      }
+    }
+  },
+  "builtin_tools": {
+    "run_python": true,
+    "run_python_sandbox": true
+  },
+  "permissions": [
+    {
+      "action": "shell",
+      "resource": "ping *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "nslookup *",
+      "effect": "allow"
+    }
+  ],
+  "plugins": {
+    "disabled": []
+  }
+}

@@ -1,0 +1,4 @@
+requests>=2.28
+rich>=13.0
+textual>=8.0
+pywebview>=5.0

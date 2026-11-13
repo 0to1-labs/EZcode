@@ -1,0 +1,13 @@
+{
+  "_comment": "旧版 CLI 兼容占位配置。EZcode 桌面客户端统一使用 devices.json(由 devices.default.json 生成), 本文件无需填写。完整配置项见 devices.example.json。",
+  "llm": {
+    "active": "default",
+    "profiles": {
+      "default": {
+        "base_url": "https://api.deepseek.com",
+        "api_key": "",
+        "model": "deepseek-chat"
+      }
+    }
+  }
+}

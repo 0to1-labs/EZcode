@@ -1,0 +1,202 @@
+{
+  "_comment1": "EZcode 接入配置模板(公开产品形态)。复制本文件为 devices.json 并按需填写。",
+  "_comment2": "devices.json 含全部凭据, 已被.gitignore挡住 —— 绝不提交git/外传。",
+  "_comment3": "推荐: 直接在客户端「⚙ 设置中心」图形化填写, 无需手改本文件; 本文件是配置项的完整参考。",
+  "_update说明": "自动更新: 每次启动后台检查更新, 发现新版本会在侧栏与「设置中心 → 版本更新」提示。sources 是数组, 可同时配置多个更新源, 客户端会并行检查并取最高版本 —— 以后加国内服务器只需把 static 那条 enabled 改 true 并填 url, 不用改代码。github.repo 填 owner/repo(如 yourname/EZcode); token 仅私有仓库或需要更高 API 限额时填; mirror 可填 GitHub 下载镜像前缀。static.url 支持 https://、内网 UNC 共享路径与本地文件。发布清单 version.json 的生成方式见 README「如何推送新版本」。",
+  "update": {
+    "enabled": true,
+    "check_on_startup": true,
+    "channel": "stable",
+    "ignored_version": "",
+    "timeout": 6,
+    "sources": [
+      {
+        "type": "github",
+        "name": "GitHub Releases",
+        "enabled": true,
+        "repo": "",
+        "api_base": "https://api.github.com",
+        "asset": "EZcodeSetup",
+        "token": "",
+        "mirror": ""
+      },
+      {
+        "type": "static",
+        "name": "国内更新服务器",
+        "enabled": false,
+        "url": "https://update.example.com/ezcode/version.json"
+      }
+    ]
+  },
+  "_llm说明": "必填其一: 任何支持function calling的OpenAI兼容LLM。active=启动默认。",
+  "llm": {
+    "active": "deepseek",
+    "profiles": {
+      "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "api_key": "你的API key (sk-开头)",
+        "model": "deepseek-v4-flash"
+      },
+      "local_vllm": {
+        "_comment": "示例: 自建vLLM/Ollama等任何OpenAI兼容端点, 需支持tools",
+        "base_url": "http://127.0.0.1:8000/v1",
+        "api_key": "EMPTY",
+        "model": "你的模型名"
+      }
+    }
+  },
+  "_ui说明": "界面偏好: lang=界面与回复语言(zh 简体中文 / en English); persona=上次使用的专家, 启动时自动恢复(缺省 ezcode=安全运营, 换成 coder=通用编码 / assistant=日常工作助手 或自建专家 id)。客户端切换语言/专家时自动写入本项。可选 turn_budget=单轮时间预算秒数(缺省300, 子代理120), 到点强制基于已有信息收尾给答案, 防止大任务无限空转。",
+  "ui": {
+    "lang": "zh",
+    "persona": "ezcode"
+  },
+  "_custom_api说明": "接入任何内部系统, 自己命名。每条接入注册为只读查询工具 api_<名称>; capabilities决定能力分组与校验规则(可选: asset=资产核查/intel=威胁情报/knowledge=知识/host=主机侧)。设置中心「系统API接入」可视化编辑。",
+  "custom_api": {
+    "endpoints": [
+      {
+        "name": "cmdb",
+        "description": "查询CMDB资产信息, query填主机名或IP",
+        "base_url": "https://cmdb.example.com/api/query",
+        "api_key": "",
+        "method": "GET",
+        "capabilities": [
+          "asset"
+        ],
+        "timeout": 30,
+        "verify_ssl": true
+      }
+    ]
+  },
+  "_mcp说明": "MCP服务器(Model Context Protocol, 工具生态的标准接入方式), 工具自动注册为 mcp__<服务器>__<工具名>。stdio=本地命令行, http=Streamable HTTP。",
+  "mcp": {
+    "servers": [
+      {
+        "name": "示例-文档查询",
+        "type": "http",
+        "url": "https://mcp.example.com/mcp",
+        "enabled": false
+      }
+    ]
+  },
+  "_rag说明": "外部RAG知识库检索(向量/全文服务)。enabled=true时注册 rag_search 工具。",
+  "rag": {
+    "enabled": false,
+    "url": "http://kb.example.com/search",
+    "api_key": "",
+    "method": "POST",
+    "query_field": "query",
+    "timeout": 30,
+    "send_top_k": false,
+    "verify_ssl": false
+  },
+  "_builtin说明": "以下为预置深度接入(可选): 设置于「系统API接入」分区按需添加/移除, 无配置的接入不出现在对话工具里。其他公司的新深度集成走「插件」分区(.py)。",
+  "_builtin_tools说明": "内置工具开关: run_python=分析脚本工具(直接执行Python代码, 可执行模式下弹窗确认); run_python_sandbox=沙箱执行(默认开: 低完整性隔离, 脚本写不进沙箱目录之外, 512MB内存上限, 超时强杀)。关闭后模型看不到对应工具/恢复普通执行。",
+  "builtin_tools": {
+    "run_python": true,
+    "run_python_sandbox": true
+  },
+  "_ngsoc说明": "内置·告警检索集成(流量侧告警检索与报文下钻)。站点以内联卡片直配(url+Access Key, 设置界面「系统API接入→预置接入」可视化编辑, 站点可启用/停用); sites_file为旧形态(外部清单文件, 兼容保留)。不用就整段删掉。",
+  "ngsoc": {
+    "sites": [
+      {
+        "name": "示例站点A",
+        "code": "site-a",
+        "url": "https://alert.example.com",
+        "token": "Access-Token",
+        "apiStyle": "new",
+        "enabled": true
+      }
+    ],
+    "sites_file": "",
+    "verify_ssl": false
+  },
+  "_netbox说明": "内置·资产库集成(资产库开源IPAM)。不用就整段删掉。",
+  "netbox": {
+    "base_url": "https://netbox.example.com/api/ipam/ip-addresses/",
+    "token": "资产库 API Token",
+    "verify_ssl": false
+  },
+  "_edr说明": "内置·主机侧告警集成。client_module_path指向该设备API客户端模块目录。不用就整段删掉。",
+  "edr": {
+    "client_module_path": "/path/to/api_client_dir",
+    "projects": [
+      {
+        "name": "示例项目",
+        "server": "https://host.example.com",
+        "token": "API token"
+      }
+    ]
+  },
+  "_permissions说明": "权限规则: {action, resource, effect}。默认: 破坏性命令=deny, 敏感文件读取=deny, 其余写/命令=ask(弹窗确认), 普通读=allow。",
+  "permissions": [
+    {
+      "action": "shell",
+      "resource": "ping *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "nslookup *",
+      "effect": "allow"
+    }
+  ],
+  "plugins": {
+    "disabled": []
+  },
+  "_projects说明": "项目=设备组: 同一项目下的设备会被聚合检索(sec_search)并发查询, 同一条告警多设备命中会合并并标注来源。kind 可选 ngsoc / edr / http; http 设备需要 mapping(设置中心可点「自动适配」让模型生成并用真实样本校验)。",
+  "projects": [
+    {
+      "name": "示例项目",
+      "devices": [
+        {
+          "name": "流量侧",
+          "kind": "ngsoc",
+          "site": "示例站点",
+          "url": "https://alert.example.com",
+          "token": "",
+          "enabled": true
+        },
+        {
+          "name": "主机侧",
+          "kind": "edr",
+          "project": "示例项目",
+          "server": "https://edr.example.com",
+          "token": "",
+          "enabled": true
+        },
+        {
+          "name": "边界WAF",
+          "kind": "http",
+          "base_url": "https://waf.example.com",
+          "auth": {
+            "type": "bearer",
+            "token": ""
+          },
+          "mapping": {
+            "request": {
+              "method": "GET",
+              "path": "/api/v1/alarms"
+            },
+            "response": {
+              "list_path": "data.list",
+              "fields": {
+                "alarm_id": "id",
+                "name": "name",
+                "severity": "level",
+                "time": {
+                  "path": "ts",
+                  "format": "ms"
+                },
+                "src_ip": "src_ip",
+                "dst_ip": "dst_ip",
+                "dst_port": "dst_port"
+              }
+            }
+          },
+          "enabled": true,
+          "api_doc": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "_comment": "EZcode 判据知识库·开源模板。复制为 criteria.json 后按你的环境沉淀。category: rule=判据 defect=产品缺陷 fingerprint=报文指纹 case=先例 env=环境情报",
+  "entries": [
+    {"id": "R-001", "category": "rule", "title": "报文级铁律", "tags": ["误报", "报文", "证据", "注入", "webshell", "挖矿", "evidence"], "content": "注入/命令执行/WebShell/挖矿类告警, 未取到请求体/报文不得下误报结论。evidence下钻必须解码packet_data报文本体, 不能只看行为字段(occur_time/hit_num/result_code只是元数据)。元告警('高频攻击源'等二次聚合判断)不豁免报文检查。"},
+    {"id": "R-002", "category": "rule", "title": "packet_data全量解码与截断定性约束", "tags": ["截断", "packet_data", "完整性", "total length"], "content": "packet_data必须完整解码分析, 禁止只看前N字节下定性结论。验证完整性: 对照IP头Total Length与实际捕获字节数。数据截断时, 涉及畸形字段/CVE构造的结论必须标注'因数据截断未完整证实', 不得把检测引擎的CVE判定当已验证事实转述。"},
+    {"id": "R-003", "category": "rule", "title": "详情页报文样本(独立证据源)", "tags": ["详情页", "上行", "下行", "payload", "base64"], "content": "evidence API的packet_data经常为null。告警平台告警详情页自带'上行前N字节/下行前N字节'(ASCII视图+base64副本), 是独立证据源。API拿不到报文时, 请用户从详情页复制payload贴进来解码。"},
+    {"id": "R-004", "category": "rule", "title": "res=1成功字段证伪/防火墙Action为准", "tags": ["res=1", "attackresult", "防火墙", "action", "成功"], "content": "res=1'成功'字段不可采信——SSH等加密协议的认证成败传感器看不到, attackResult是行为推断。处置是否生效以防火墙Action字段为准(Block=阻断成功/Alert=告警未阻断)。定性权: 主机侧auth.log > 流量侧推断。"},
+    {"id": "R-005", "category": "rule", "title": "XFF必查", "tags": ["xff", "代理", "内网源", "真实客户端", "转发"], "content": "内网IP疑似发起攻击时, 必先查X-Forwarded-For/X-Original-Forwarded-For还原真实客户端链(常见于经ingress/网关转发的流量, '源'其实是转发pod)。"},
+    {"id": "R-006", "category": "rule", "title": "NAT双视图判据", "tags": ["nat", "网关", "router_gw", "镜像", "同秒", "snat"], "content": "两条告警同秒+同载荷/同目的=同一流量的两个视图(网关视图+SNAT视图)而非两次行为。内网'源IP'先查资产库确认是否ROUTER_GW/NAT设备——是则真实源在网关后(需网络节点conntrack查映射)。"},
+    {"id": "R-007", "category": "rule", "title": "设备证明≠报文实证/引用必亲验", "tags": ["签名", "二手", "亲验", "引用", "天眼"], "content": "防火墙/流量探针签名命中是第二手证据, 不等于报文实证。引用他人报告/结论前必须逐条亲验。告警平台机器研判(triageReason/aiJudgmentResult)不盲从——与流量特征矛盾时以日志证据为准。"},
+    {"id": "R-008", "category": "rule", "title": "封禁双确认", "tags": ["封禁", "情报", "行为", "双确认", "加白", "黑名单"], "content": "封禁类处置建议必须有: 情报定性(恶意/可疑)+行为证据(规律性/画像), 两者缺一不可。封禁/加白一律由用户手动执行, agent只做研判与登记建议, 绝不代替执行。"},
+    {"id": "R-009", "category": "rule", "title": "国外IP规律爆破快速定性", "tags": ["ssh", "爆破", "国外", "规律", "封禁", "间隔"], "content": "外到内SSH爆破+攻击源为国外IP+evidence的occur_time间隔呈规律性(固定节奏重连)→直接判定外部攻击爆破, 可建议封禁, 禁止加白。注意: 此判据仅适用于国外源; 国内IP(含云厂商)即使间隔规律也可能是合法业务认证重试, 必须走资产归属+业务确认。"},
+    {"id": "R-010", "category": "rule", "title": "SSH'爆破成功'三级定性法", "tags": ["ssh", "成功", "失陷", "凭据泄露", "auth.log"], "content": "流量侧'成功'≠失陷, 必须三级区分: ①失陷=主机auth.log有成功登录+有恶意行为 ②凭据泄露未利用=有成功登录但无恶意行为→改密轮换 ③流量侧误判=auth.log无该源成功登录。输出必须附'主机侧验证状态: 已验证/待验证', 未验证前只能写'疑似失陷待主机侧确认'。"},
+    {"id": "R-011", "category": "rule", "title": "矿池IOC误标/STRATUM告警先查资产", "tags": ["stratum", "挖矿", "矿池", "registry", "误标"], "content": "STRATUM挖矿/登录矿池告警先查资产归属: 目的IP是registry/LB VIP→大概率Docker Registry流量被误判(Registry API与STRATUM同为JSON-RPC类)。矿池域名的A记录查询≠挖矿连接(只是DNS解析)。真实挖矿看authorize/submit报文。"},
+    {"id": "R-012", "category": "rule", "title": "聚合口径与过滤漏证据", "tags": ["聚合", "times", "严重度", "过滤", "低危"], "content": "一条告警可跨多小时聚合, 判断攻击节奏看evidence原始日志occur_time分布, 不看times。中危以上过滤会漏证据(Stratum握手告警是低危), 行为链关联查询不带严重度过滤。"},
+    {"id": "R-013", "category": "rule", "title": "情报强制查询", "tags": ["情报", "外网", "封禁", "无记录", "threatfox"], "content": "任何外网攻击源IP在给出最终研判前必须查威胁情报——行为特征和情报是两个独立维度。禁止用训练知识代替情报查询(IP归属地/段属性必须以查询结果为准)。情报无记录≠安全。"},
+    {"id": "R-014", "category": "rule", "title": "证据分级强制", "tags": ["证据", "分级", "实证", "推断", "待确认"], "content": "每条结论标注[实证](报文/主机侧直接证据)/[推断](行为模式推断)/[待确认]。严格区分, 不混用。缺乏证据时输出'待确认+缺什么证据+怎么补', 不猜。"},
+    {"id": "D-001", "category": "defect", "title": "告警平台缺陷: IOC富化失效+attackResult推断", "tags": ["ngsoc", "ioc", "attackresult", "缺陷"], "content": "①告警ioc/iocType字段可能为空, 情报匹配不可信, 恶意判定必须自己查情报源。②attackResult是行为推断非事实: attackResult=2(未成功)是流量模式推断; 关键告警(尤其爆破类)必须建议主机侧查auth.log/lastb验证。"},
+    {"id": "D-002", "category": "defect", "title": "告警平台缺陷: 规则阈值与文档不符", "tags": ["ngsoc", "规则", "阈值", "缺陷"], "content": "检测规则描述的触发阈值可能过时(如SSH爆破规则写'10次/min', 实际3次/46min即触发)——不要按文档理解阈值, 判断节奏看evidence原始日志。"},
+    {"id": "F-001", "category": "fingerprint", "title": "指纹: LLM API对话流量(误报重灾区)", "tags": ["llm", "ai", "tool_calls", "反弹shell", "误报", "编码代理"], "content": "报文含tool_calls/'role':'tool'/'role':'assistant'/reasoning_content/chatcmpl-*→AI代理与模型服务的对话流量, 会被'反弹Shell/命令执行/SQL注入'类规则系统性误判(交互式工具调用循环酷似shell会话)。AI业务链路这类误报是常态, 判定时先解码报文找这些标记。"},
+    {"id": "F-002", "category": "fingerprint", "title": "指纹: DNS version.bind探测", "tags": ["dns", "version.bind", "txt", "chaos", "侦察"], "content": "DNS报文07'version'04'bind'00+QTYPE=TXT(0x0010)+QCLASS=CH(0x0003)→BIND版本探测(侦察)。普通查询看QNAME/QTYPE判意图。"},
+    {"id": "F-003", "category": "fingerprint", "title": "指纹: VXLAN隧道流量", "tags": ["vxlan", "隧道", "8472", "误报"], "content": "UDP载荷起始08 00 00 00+3字节VNI+内层以太帧(常见8472端口)→VXLAN隧道封装, 行为启发式误判重灾区。fa:16:3e MAC前缀→OpenStack虚机/隧道端点流量。"},
+    {"id": "F-004", "category": "fingerprint", "title": "指纹: TLS/SSH加密流量", "tags": ["tls", "ssh", "加密", "kexinit", "黑盒"], "content": "TLS记录头16 03 01/03(握手)/17 03 03(应用数据)→加密流量应用内容黑盒, 定性靠URI/UA/方向旁证。SSH认证在加密通道内, 报文看不到用户名/密码, '猜解'判定永远是连接模式推断。"},
+    {"id": "F-005", "category": "fingerprint", "title": "指纹: Stratum挖矿协议", "tags": ["stratum", "挖矿", "authorize", "submit", "矿池"], "content": "真实挖矿看authorize(登录授权带钱包)/submit(提交share)报文。防火墙Block authorize=挖矿未遂无收益。"},
+    {"id": "C-001", "category": "case", "title": "先例模板: 同形字面量误报", "tags": ["先例", "模板", "同形", "误报"], "content": "(示例格式) 现象: 某签名匹配了LLM生成文本/日志字段中的字面量片段。实证: 字节级解码命中点。定性: 同形误报。处置: 数据过滤+研判条件降噪, 不加白IP。按此格式把你的真实案例沉淀到这里。"},
+    {"id": "E-001", "category": "env", "title": "环境模板: 站点与网段映射", "tags": ["环境", "模板", "站点", "网段"], "content": "(示例格式) 记录你的SOC站点清单、网段↔平台映射、公网出口段、NAT网关地址、安全工具主机段等。研判时agent会自动引用。"}
+  ]
+}

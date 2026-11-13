@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>EZcode · 安全运营研判工作台</title>
+<style>
+:root{
+  --bg:#141417; --bg2:#1b1b1f; --bg3:#222227; --panel:#26262c;
+  --border:#33333a; --text:#e8e8ea; --dim:#9a9aa2; --dim2:#6e6e76;
+  --accent:#4da3ff; --accent2:#2d7dd2; --ok:#4cc38a; --warn:#e5a53d; --err:#e5615f;
+  --user:#2b3a4d; --mono:Consolas,"Cascadia Mono","Courier New",monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html,body{height:100%}
+body{background:var(--bg); color:var(--text); font:14px/1.65 "Segoe UI","Microsoft YaHei",sans-serif;
+     display:flex; flex-direction:column; overflow:hidden; user-select:text}
+::selection{background:#3d6ea5}
+/* ---------- 顶栏 ---------- */
+#topbar{display:flex; align-items:center; gap:10px; padding:8px 14px; background:var(--bg2);
+        border-bottom:1px solid var(--border); flex:none}
+#logo{font-weight:700; color:var(--accent); font-size:15px; letter-spacing:.5px}
+#logo .shield{margin-right:4px}
+.topbtn{background:var(--bg3); color:var(--text); border:1px solid var(--border); border-radius:6px;
+       padding:5px 12px; cursor:pointer; font-size:13px; white-space:nowrap}
+.topbtn:hover{border-color:var(--accent2); background:#2a2a31}
+.topbtn.exec{border-color:var(--warn); color:var(--warn)}
+#statusdot{width:9px; height:9px; border-radius:50%; background:var(--ok); margin-left:auto; flex:none}
+#statusdot.busy{background:var(--warn); animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+#ctxinfo{color:var(--dim); font-size:12px}
+/* ---------- 消息流 ---------- */
+#chat{flex:1; overflow-y:auto; padding:18px 22px 10px; scroll-behavior:smooth}
+.msg{max-width:980px; margin:0 auto 14px; animation:fadein .18s ease}
+@keyframes fadein{from{opacity:0; transform:translateY(4px)} to{opacity:1}}
+.msg .who{font-size:12px; color:var(--dim); margin-bottom:4px; display:flex; align-items:center; gap:8px}
+.msg .who .tag{padding:1px 8px; border-radius:4px; font-weight:600}
+.msg.user .tag{background:var(--user); color:#bcd6f5}
+.msg.bot .tag{background:#1d3a2c; color:var(--ok)}
+.msg .body{border-radius:8px; padding:10px 14px; background:var(--bg2); border:1px solid var(--border)}
+.msg.user .body{background:#20242b; white-space:pre-wrap; user-select:text}
+.msg.sys{max-width:760px; text-align:center}
+.msg.sys .body{background:none; border:none; color:var(--dim2); font-size:12.5px; padding:2px}
+.copybtn{margin-left:auto; background:none; border:1px solid var(--border); color:var(--dim);
+         border-radius:5px; padding:1px 9px; cursor:pointer; font-size:11.5px; visibility:hidden}
+.msg:hover .copybtn{visibility:visible}
+.copybtn:hover{color:var(--accent); border-color:var(--accent2)}
+/* ---------- Markdown渲染 ---------- */
+.md h1,.md h2,.md h3,.md h4{margin:12px 0 6px; line-height:1.35}
+.md h1{font-size:18px; color:#f0f0f2; border-bottom:1px solid var(--border); padding-bottom:4px}
+.md h2{font-size:16.5px; color:#eaeaf0}
+.md h3{font-size:15px; color:#dfdfe6}
+.md p{margin:6px 0}
+.md ul,.md ol{margin:6px 0 6px 22px}
+.md li{margin:2px 0}
+.md code{background:#17171b; border:1px solid var(--border); border-radius:4px;
+         padding:1px 5px; font-family:var(--mono); font-size:12.5px; color:#8fd0ff}
+.md pre{background:#101014; border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+        overflow-x:auto; margin:8px 0; position:relative}
+.md pre code{background:none; border:none; padding:0; color:#d6d6da; font-size:12.5px; line-height:1.55}
+.md table{border-collapse:collapse; margin:8px 0; font-size:13px; display:block; max-width:100%; overflow-x:auto}
+.md th,.md td{border:1px solid var(--border); padding:5px 10px; text-align:left}
+.md th{background:#202026; color:#e8e8ea; white-space:nowrap}
+.md tr:nth-child(even) td{background:#191920}
+.md blockquote{border-left:3px solid var(--accent2); padding:2px 12px; color:var(--dim); margin:8px 0;
+               background:#1a1a22; border-radius:0 6px 6px 0}
+.md hr{border:none; border-top:1px solid var(--border); margin:10px 0}
+.md a{color:var(--accent)}
+.md strong{color:#f2f2f4}
+.md .cursor{display:inline-block; width:7px; height:15px; background:var(--accent);
+            vertical-align:-2px; animation:pulse .9s infinite}
+/* ---------- 工具/思考折叠 ---------- */
+.toolrow{max-width:980px; margin:0 auto 8px; font-size:12.5px}
+.toolrow summary{cursor:pointer; padding:5px 12px; background:#1c1c22; border:1px solid var(--border);
+                 border-radius:7px; color:var(--dim); list-style:none; display:flex; gap:8px; align-items:center}
+.toolrow summary::before{content:"⚙"; color:var(--accent)}
+.toolrow summary .args{color:var(--dim2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1}
+.toolrow summary .rstat{color:var(--ok)}
+.toolrow summary .rstat.err{color:var(--err)}
+.toolrow .tres{margin-top:5px; background:#101014; border:1px solid var(--border); border-radius:7px;
+               padding:8px 12px; font-family:var(--mono); font-size:12px; color:var(--dim);
+               white-space:pre-wrap; word-break:break-all; max-height:260px; overflow-y:auto}
+.thinkrow{max-width:980px; margin:0 auto 8px; font-size:12.5px}
+.thinkrow summary{cursor:pointer; padding:4px 12px; color:var(--dim2); list-style:none}
+.thinkrow summary::before{content:"💭 "; }
+.thinkrow .ttxt{margin-top:4px; padding:8px 12px; background:#191920; border-radius:7px;
+                color:var(--dim2); font-size:12.3px; white-space:pre-wrap; max-height:200px; overflow-y:auto}
+/* ---------- 输入区 ---------- */
+#inputbox{flex:none; padding:10px 22px 14px; background:var(--bg2); border-top:1px solid var(--border)}
+#inputwrap{max-width:980px; margin:0 auto; border:1px solid var(--border); border-radius:10px;
+           background:var(--bg3); overflow:hidden}
+#inputwrap:focus-within{border-color:var(--accent2)}
+#input{width:100%; background:transparent; color:var(--text); border:none; outline:none; resize:none;
+       padding:10px 14px; font:14px/1.6 inherit; min-height:46px; max-height:200px; user-select:text}
+#input::placeholder{color:var(--dim2)}
+#inputbar{display:flex; align-items:center; gap:10px; padding:6px 12px 8px}
+#hint{color:var(--dim2); font-size:11.5px; flex:1}
+#sendbtn{background:var(--accent2); color:#fff; border:none; border-radius:7px; padding:7px 22px;
+         cursor:pointer; font-size:13.5px; font-weight:600}
+#sendbtn:hover{background:var(--accent)}
+#sendbtn.stop{background:#8a2f2d}
+#sendbtn.stop:hover{background:#a63a38}
+#sendbtn:disabled{background:#3a3a41; color:#77777e; cursor:default}
+/* ---------- 模态 ---------- */
+#overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; z-index:50;
+         align-items:center; justify-content:center}
+#overlay.show{display:flex}
+.modal{background:var(--bg2); border:1px solid var(--border); border-radius:12px; min-width:380px;
+       max-width:600px; max-height:78vh; overflow-y:auto; padding:18px 20px; box-shadow:0 12px 48px #0009}
+.modal h3{font-size:15px; color:#f0f0f2; margin-bottom:12px}
+.modal .mlist{max-height:46vh; overflow-y:auto}
+.modal .mitem{padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; border:1px solid transparent}
+.modal .mitem:hover{background:var(--bg3); border-color:var(--border)}
+.modal .mitem.on{border-color:var(--accent2); background:#1c2a3a}
+.modal .mitem .sub{color:var(--dim2); font-size:11.5px; margin-top:2px}
+.modal .mbtns{display:flex; gap:10px; margin-top:14px; justify-content:flex-end}
+.modal .mbtns button{border-radius:7px; padding:7px 18px; cursor:pointer; border:1px solid var(--border);
+                     background:var(--bg3); color:var(--text); font-size:13px}
+.modal .mbtns .allow{background:var(--accent2); border-color:var(--accent2); color:#fff; font-weight:600}
+.modal .mbtns .always{background:#2c5a3c; border-color:#2c5a3c; color:#d8f5e4}
+.modal .mbtns .deny{background:#5a2c2c; border-color:#5a2c2c; color:#f5d8d8}
+#toast{position:fixed; right:18px; bottom:88px; z-index:99; display:flex; flex-direction:column; gap:8px}
+.toast{background:var(--bg3); border:1px solid var(--border); border-left:3px solid var(--accent);
+       border-radius:8px; padding:9px 14px; font-size:13px; max-width:420px;
+       box-shadow:0 6px 24px #0007; animation:fadein .2s ease}
+.toast.ok{border-left-color:var(--ok)} .toast.warn{border-left-color:var(--warn)} .toast.err{border-left-color:var(--err)}
+#runstate{max-width:980px; margin:0 auto; height:22px; font-size:12px; color:var(--dim);
+          display:flex; align-items:center; gap:8px; visibility:hidden}
+#runstate .spin{width:11px; height:11px; border:2px solid var(--border); border-top-color:var(--accent);
+                border-radius:50%; animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span id="logo"><span class="shield">🛡</span>EZcode</span>
+  <button class="topbtn" id="btn-mode" onclick="ui.pickMode()">只读查询</button>
+  <button class="topbtn" id="btn-model" onclick="ui.pickModel()">模型</button>
+  <button class="topbtn" onclick="ui.newSession()">新会话</button>
+  <button class="topbtn" onclick="ui.openSessions()">历史会话</button>
+  <button class="topbtn" onclick="ui.exportSession()">导出</button>
+  <button class="topbtn" onclick="ui.compact()">压缩上下文</button>
+  <span id="ctxinfo"></span>
+  <span id="statusdot" title="空闲"></span>
+</div>
+
+<div id="chat"></div>
+
+<div id="inputbox">
+  <div id="runstate"><span class="spin"></span><span id="runtext"></span></div>
+  <div id="inputwrap">
+    <textarea id="input" placeholder="粘贴告警 / 说人话下指令；Enter 发送，Shift+Enter 换行；@文件 附件；内容可随时鼠标选中复制"></textarea>
+    <div id="inputbar">
+      <span id="hint">Enter 发送 · Shift+Enter 换行 · @路径 附件 · 拖选任意文字可直接复制</span>
+      <button id="sendbtn" onclick="ui.sendOrStop()">发送</button>
+    </div>
+  </div>
+</div>
+
+<div id="overlay"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============ mini工具 ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ============ mini Markdown渲染器(零依赖, 覆盖研判报告常用元素) ============ */
+function renderMD(src){
+  src = String(src??"").replace(/\r\n/g,"\n");
+  const out = []; let i = 0, m;
+  const lines = src.split("\n");
+  while(i < lines.length){
+    let L = lines[i];
+    // 围栏代码块
+    if(/^```/.test(L)){
+      const lang = L.slice(3).trim(); let buf = []; i++;
+      while(i < lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++;
+      out.push("<pre><code" + (lang?` data-lang="${esc(lang)}"`:"") + ">" + esc(buf.join("\n")) + "</code></pre>");
+      continue;
+    }
+    // 表格
+    if(/\|/.test(L) && i+1 < lines.length && /^\s*\|?[\s:\-|]+\|[\s:\-|]*$/.test(lines[i+1])){
+      const head = L.split("|").map(x=>x.trim()).filter((_,j,a)=>j>0||!x.startsWith("|")).filter(x=>x!=="");
+      let hCells = splitRow(L), align = splitRow(lines[i+1]).map(x=>/:-+/.test(x)&&/-+:/.test(x)?"center":/-+:$/.test(x)?"right":"left");
+      i += 2; let rows = [];
+      while(i < lines.length && /\|/.test(lines[i]) && lines[i].trim()){ rows.push(splitRow(lines[i])); i++; }
+      out.push("<table><thead><tr>" + hCells.map((h,j)=>`<th style="text-align:${align[j]||"left"}">${inline(h)}</th>`).join("") +
+               "</tr></thead><tbody>" + rows.map(r=>"<tr>"+r.map((c,j)=>`<td style="text-align:${align[j]||"left"}">${inline(c)}</td>`).join("")+"</tr>").join("") + "</tbody></table>");
+      continue;
+    }
+    // 标题
+    if((m = L.match(/^(#{1,4})\s+(.*)$/))){
+      out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue;
+    }
+    // 分隔线
+    if(/^\s*(---+|\*\*\*+)\s*$/.test(L)){ out.push("<hr>"); i++; continue; }
+    // 引用块
+    if(/^\s*>\s?/.test(L)){
+      let buf = []; while(i < lines.length && /^\s*>\s?/.test(lines[i])){ buf.push(lines[i].replace(/^\s*>\s?/,"")); i++; }
+      out.push("<blockquote>" + inline(buf.join(" ")) + "</blockquote>"); continue;
+    }
+    // 无序列表
+    if(/^\s*[-•]\s+/.test(L)){
+      let items = []; while(i < lines.length && /^\s*[-•]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*[-•]\s+/,"")); i++; }
+      out.push("<ul>" + items.map(x=>"<li>"+inline(x)+"</li>").join("") + "</ul>"); continue;
+    }
+    // 有序列表
+    if(/^\s*\d+[.)]\s+/.test(L)){
+      let items = []; while(i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*\d+[.)]\s+/,"")); i++; }
+      out.push("<ol>" + items.map(x=>"<li>"+inline(x)+"</li>").join("") + "</ol>"); continue;
+    }
+    // 空行
+    if(!L.trim()){ i++; continue; }
+    // 普通段落(连续行合并)
+    let para = [L]; i++;
+    while(i < lines.length && lines[i].trim() && !/^(#{1,4}\s|```|\s*[-•]\s|\s*\d+[.)]\s|\s*>|\s*---)/.test(lines[i]) && !/\|/.test(lines[i])){
+      para.push(lines[i]); i++;
+    }
+    out.push("<p>" + inline(para.join("\n")).replace(/\n/g,"<br>") + "</p>");
+  }
+  return out.join("\n");
+}
+function splitRow(l){ return l.replace(/^\s*\|/,"").replace(/\|\s*$/,"").split("|").map(x=>x.trim()); }
+function inline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+}
+
+/* ============ UI状态 ============ */
+const ui = {
+  busy:false, mode:"query", streaming:null,
+  toast(msg, sev="ok", ms=3800){
+    const t = document.createElement("div"); t.className = "toast "+sev; t.textContent = msg;
+    $("#toast").appendChild(t); setTimeout(()=>t.remove(), ms);
+  },
+  addMsg(kind, html, rawText){
+    const chat = $("#chat");
+    const div = document.createElement("div");
+    div.className = "msg " + kind;
+    if(kind === "user"){
+      div.innerHTML = `<div class="who"><span class="tag">你</span></div><div class="body">${esc(rawText)}</div>`;
+    }else if(kind === "sys"){
+      div.innerHTML = `<div class="body">${html}</div>`;
+    }else{
+      const id = "c"+Date.now()+Math.random().toString(36).slice(2,6);
+      div.innerHTML = `<div class="who"><span class="tag">EZcode</span>
+        <button class="copybtn">复制全文</button></div>
+        <div class="body md" id="${id}">${html}</div>`;
+      div.querySelector(".copybtn").onclick = ()=>ui.copyText(div._raw||rawText||"");
+    }
+    div._raw = rawText || "";
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  },
+  copyText(text){
+    pywebview.api.copy_msg(String(text||"")).then(()=>ui.toast("已复制到系统剪贴板","ok"));
+  },
+  /* -------- 发送/停止 -------- */
+  sendOrStop(){ if(ui.busy){ pywebview.api.stop().then(()=>ui.toast("已请求中止","warn")); } else ui.send(); },
+  send(){
+    const ta = $("#input"); const text = ta.value.trim();
+    if(!text || ui.busy) return;
+    ta.value = ""; ta.style.height = "auto";
+    ui.addMsg("user", "", text);
+    pywebview.api.send(text);
+  },
+  /* -------- 流式回调(Python evaluate_js 推) -------- */
+  streamStart(){ ui.streaming = ui.addMsg("bot", '<span class="cursor"></span>', ""); ui.setBusy(true); },
+  thinkDelta(s){
+    let d = $("#chat .thinklive");
+    if(!d){ d = document.createElement("details"); d.className = "thinkrow thinklive"; d.open = false;
+      d.innerHTML = `<summary>思考中…</summary><div class="ttxt"></div>`;
+      $("#chat").appendChild(d); $("#chat").scrollTop = $("#chat").scrollHeight; }
+    d.querySelector(".ttxt").textContent += s;
+  },
+  thinkStart(n){ ui.thinkDelta(""); },
+  thinkDone(total){
+    const d = $("#chat .thinklive");
+    if(d){ d.querySelector("summary").textContent = `💭 思考过程 (${total}字, 点击展开)`; d.classList.remove("thinklive"); }
+  },
+  contentDelta(s){
+    if(!ui.streaming) return;
+    ui.streaming._buf = (ui.streaming._buf||"") + s;
+    ui.streaming.querySelector(".body").innerHTML = renderMD(ui.streaming._buf) + '<span class="cursor"></span>';
+    const chat = $("#chat"); chat.scrollTop = chat.scrollHeight;
+  },
+  contentEnd(){ if(ui.streaming){
+      ui.streaming._raw = ui.streaming._buf || "";
+      ui.streaming.querySelector(".body").innerHTML = renderMD(ui.streaming._buf||"");
+    } },
+  toolStart(o){ // {name, args}
+    const d = document.createElement("details");
+    d.className = "toolrow tlive"; d.dataset.tname = o.name;
+    d.innerHTML = `<summary>⚙ <b>${esc(o.name)}</b><span class="args">${esc(String(o.args||"").slice(0,120))}</span>
+      <span class="rstat">运行中…</span></summary><div class="tres">(执行中)</div>`;
+    $("#chat").appendChild(d); $("#chat").scrollTop = $("#chat").scrollHeight;
+    ui.runState("工具: " + o.name);
+  },
+  toolDone(o){ // {name, ok, dt, head, err}
+    const d = $("#chat .toolrow.tlive[data-tname='"+CSS.escape(o.name)+"']") || $("#chat .toolrow.tlive");
+    if(d){
+      d.classList.remove("tlive");
+      const st = d.querySelector(".rstat");
+      st.textContent = o.ok ? `✓ ${o.dt}s` : "✗ 失败";
+      st.className = "rstat" + (o.ok ? "" : " err");
+      d.querySelector(".tres").textContent = String(o.head||o.err||"").slice(0, 3000);
+    }
+  },
+  roundDone(o){ // {answer, dt, n_tools, think, ctx_pct}
+    ui.streaming = null; ui.setBusy(false);
+    ui.addMsg("sys", `用时 ${o.dt}s · 工具 ${o.n_tools} 次 · 思考 ${o.think} 字 · 上下文 ~${o.ctx_pct}%`, "");
+    if(o.answer){ ui.addMsg("bot", renderMD(o.answer), o.answer); }
+    ui.refreshState();
+  },
+  runState(txt){
+    $("#runstate").style.visibility = "visible";
+    $("#runtext").textContent = txt;
+  },
+  setBusy(b){
+    ui.busy = b;
+    $("#statusdot").className = b ? "busy" : "";
+    $("#statusdot").title = b ? "运行中" : "空闲";
+    $("#sendbtn").textContent = b ? "停止" : "发送";
+    $("#sendbtn").className = b ? "stop" : "";
+    if(!b) $("#runstate").style.visibility = "hidden";
+  },
+  refreshState(){
+    pywebview.api.get_state().then(s=>{
+      ui.mode = s.mode;
+      $("#btn-mode").textContent = s.mode==="execute" ? "可执行模式" : "只读查询";
+      $("#btn-mode").className = "topbtn" + (s.mode==="execute" ? " exec" : "");
+      $("#btn-model").textContent = s.model;
+      $("#ctxinfo").textContent = `会话${s.n_msgs}条 · 上下文 ~${s.ctx_pct}%`;
+    }).catch(()=>{});
+  },
+  /* -------- 顶栏操作 -------- */
+  pickMode(){
+    if(ui.busy) return ui.toast("运行中不能切模式","warn");
+    ui.modal("切换模式", [
+      {id:"query", name:"只读查询模式", sub:"仅查询/研判工具, 处置类写操作不可见"},
+      {id:"execute", name:"可执行模式", sub:"解锁处置回写/知识沉淀/文件编辑/shell, 写操作均有人工确认弹窗"},
+    ], ui.mode, id=>{ pywebview.api.set_mode(id); ui.refreshState(); });
+  },
+  pickModel(){
+    if(ui.busy) return ui.toast("运行中不能切模型","warn");
+    pywebview.api.list_models().then(list=>{
+      ui.modal("切换模型", list.map(x=>({id:x.key, name:x.model, sub:x.profile})), null,
+        id=>{ pywebview.api.set_model(id); ui.refreshState(); });
+    });
+  },
+  newSession(){ if(ui.busy) return ui.toast("运行中不能新建会话","warn");
+    pywebview.api.new_session().then(()=>location.reload()); },
+  openSessions(){
+    pywebview.api.list_sessions().then(list=>{
+      if(!list.length) return ui.toast("暂无历史会话","warn");
+      ui.modal("历史会话", list.map(x=>({id:x.id, name:x.title, sub:`${x.n_msgs}条消息 · ${x.saved_at}`})), null,
+        id=>{ pywebview.api.open_session(id).then(()=>location.reload()); });
+    });
+  },
+  exportSession(){ pywebview.api.export_session().then(p=>ui.toast("已导出: "+p,"ok")); },
+  compact(){ if(ui.busy) return; pywebview.api.compact().then(()=>{ ui.addMsg("sys","已手动压缩历史上下文",""); ui.refreshState(); }); },
+  /* -------- 权限确认弹窗(Python调) -------- */
+  confirm(o){ // {seq, action, resource, detail}
+    ui._confirmOpen = true;                      // 权限弹窗不允许点遮罩关闭
+    const box = $("#modal");
+    box.innerHTML = `<h3>⚠ 权限确认: ${esc(o.action)}</h3>
+      <div style="white-space:pre-wrap; background:var(--bg3); border:1px solid var(--border);
+                  border-radius:8px; padding:12px 14px; font-size:13px; max-height:44vh; overflow-y:auto">${esc(o.detail)}</div>
+      <div class="mbtns"><button class="deny" onclick="ui.confirmResult(${o.seq},'deny')">拒绝</button>
+      <button class="always" onclick="ui.confirmResult(${o.seq},'always')">本会话总是允许</button>
+      <button class="allow" onclick="ui.confirmResult(${o.seq},'once')">允许这一次</button></div>`;
+    $("#overlay").className = "show";
+  },
+  confirmResult(seq, choice){
+    ui._confirmOpen = false;
+    $("#overlay").className = "";
+    pywebview.api.confirm_result(seq, String(choice||"deny"));   // 传字符串: 'once'/'always'/'deny'
+  },
+  /* -------- 通用选择器 -------- */
+  modal(title, items, curId, onpick){
+    const box = $("#modal");
+    box.innerHTML = `<h3>${esc(title)}</h3><div class="mlist">` +
+      items.map(x=>`<div class="mitem ${x.id===curId?"on":""}" data-id="${esc(x.id)}">
+        <div>${esc(x.name)}</div>${x.sub?`<div class="sub">${esc(x.sub)}</div>`:""}</div>`).join("") +
+      `</div><div class="mbtns"><button onclick="ui.closeModal()">取消</button></div>`;
+    box.querySelectorAll(".mitem").forEach(el=>el.onclick=()=>{ ui.closeModal(); onpick(el.dataset.id); });
+    $("#overlay").className = "show";
+  },
+  closeModal(){ $("#overlay").className = ""; },
+};
+
+/* ============ 键盘 ============ */
+$("#input").addEventListener("keydown", e=>{
+  if(e.key==="Enter" && !e.shiftKey && !e.ctrlKey && !e.altKey){ e.preventDefault(); ui.sendOrStop(); }
+});
+$("#input").addEventListener("input", e=>{
+  const ta = e.target; ta.style.height="auto"; ta.style.height = Math.min(ta.scrollHeight,200)+"px";
+});
+$("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay" && !ui._confirmOpen) ui.closeModal(); });
+
+/* ============ 启动 ============ */
+window.addEventListener("pywebviewready", ()=>{
+  ui.refreshState();
+  pywebview.api.welcome().then(w=>{
+    ui.addMsg("sys", `<b style="color:var(--accent)">EZcode · 安全运营研判工作台</b><br>
+      ${esc(w)}<br>
+      <span style="color:var(--dim2)">回答内容可随时<b>鼠标选中复制</b>(Ctrl+C), 或点回答右上角"复制全文" · 工具调用可点击展开查看证据</span>`, "");
+    // 恢复的历史会话: 重放已有消息
+    pywebview.api.history().then(list=>{
+      if(list && list.length){
+        ui.addMsg("sys", `↻ 已恢复会话历史(${list.length}条消息), 继续对话即可`, "");
+        for(const m of list) ui.addMsg(m.kind==="user"?"user":"bot",
+          m.kind==="user"?"":renderMD(m.text), m.text);
+        $("#chat").scrollTop = $("#chat").scrollHeight;
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

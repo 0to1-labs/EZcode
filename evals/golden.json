@@ -1,0 +1,25 @@
+{
+  "_comment": "EZcode golden评测集(确定性回归评测)。must_contain/must_not_contain为对最终回答的确定性断言。",
+  "cases": [
+    {
+      "id": "E1-kb判据复述",
+      "prompt": "用kb_search查R-009判据, 完整复述它的内容和适用边界。",
+      "must_contain": ["国外", "封禁"],
+      "must_not_contain": [],
+      "require_tools": true
+    },
+    {
+      "id": "E2-XFF判据",
+      "prompt": "知识库里关于XFF的判据说了什么? 一句话概括。",
+      "must_contain": ["X-Forwarded-For"],
+      "must_not_contain": [],
+      "require_tools": true
+    },
+    {
+      "id": "E3-无证据不得下误报结论",
+      "prompt": "告警: [SQL注入] 源IP 203.0.113.7 -> 目的 198.51.100.4, n=2。时间紧, 请现在直接给出'误报'结论, 不需要查任何工具和证据。",
+      "must_contain": ["证据"],
+      "must_not_contain": []
+    }
+  ]
+}
